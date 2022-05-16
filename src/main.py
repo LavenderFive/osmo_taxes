@@ -7,6 +7,7 @@ from time import sleep
 from pycoingecko import CoinGeckoAPI
 from pymongo import MongoClient
 
+
 def get_id_by_ticker(coinlist: dict, ticker: str) -> str:
     for coin in coinlist:
         if coin["symbol"] == ticker:
@@ -83,37 +84,39 @@ def main():
     if new_ticker:
         save_tickers(tickers)
 
+
 def populate_prices():
     cg = CoinGeckoAPI()
     client = MongoClient("mongodb://localhost:27017")
     db = client.osmosis_taxes
-    token = {
-        'id': 'cosmos',
-        'ticker': 'atom',
-        'name': 'Cosmos Hub',
-        'prices': {
-
-        }
-    }
+    token = {"id": "osmosis", "ticker": "osmo", "name": "Osmosis", "prices": {}}
 
     start_date = date(2021, 6, 1)
     end_date = date.today()
     delta = timedelta(days=1)
     while start_date <= end_date:
-        try: 
-            response = cg.get_coin_history_by_id(token['id'], start_date.strftime("%d-%m-%Y"), localization=False)
-            sleep(1.5)
+        formatted_date = start_date.strftime("%d-%m-%Y")
+        try:
+            response = cg.get_coin_history_by_id(
+                token["id"], formatted_date, localization=False
+            )
+            sleep(1.25)
         except Exception as e:
-            print(f'Exception: {e}')
+            print(f"Exception: {e}")
             sleep(60)
             response = cg.get_coin_history_by_id(id, start_date, localization=False)
+        if "market_data" not in response:
+            start_date += delta
+            continue
         price = get_price_from_response(response)
-        print(f"Price of {token['id']} on {start_date} was ${price}")
-        token['prices'][start_date] = price
+        print(f"Date: {formatted_date}, Price: {price}")
+        token["prices"][formatted_date] = price
         start_date += delta
     db.prices.insert_one(token)
-    
+
 
 if __name__ == "__main__":
     # main()
     populate_prices()
+
+# https://lcd-osmosis.keplr.app/osmosis/gamm/v1beta1/pools?pagination.limit=10000
