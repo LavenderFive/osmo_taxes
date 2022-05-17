@@ -23300,11 +23300,6 @@
         "name": "FireBall"
     },
     {
-        "id": "firebird-finance",
-        "symbol": "hope",
-        "name": "Firebird.Finance"
-    },
-    {
         "id": "firebot",
         "symbol": "fbx",
         "name": "FireBot"
@@ -28718,11 +28713,6 @@
         "id": "hope-galaxy",
         "symbol": "hope",
         "name": "HOPE Galaxy"
-    },
-    {
-        "id": "hope-token",
-        "symbol": "hope",
-        "name": "Hope Token"
     },
     {
         "id": "hoppers-game",
@@ -35085,11 +35075,6 @@
         "name": "Lunaverse"
     },
     {
-        "id": "luna-wormhole",
-        "symbol": "luna",
-        "name": "LUNA (Wormhole)"
-    },
-    {
         "id": "lunch-money",
         "symbol": "lmy",
         "name": "Lunch Money"
@@ -39248,11 +39233,6 @@
         "id": "mogu",
         "symbol": "mogx",
         "name": "Mogu"
-    },
-    {
-        "id": "mogul-productions",
-        "symbol": "stars",
-        "name": "Mogul Productions"
     },
     {
         "id": "mojitoswap",
@@ -48180,11 +48160,6 @@
         "name": "Rabet"
     },
     {
-        "id": "rac",
-        "symbol": "rac",
-        "name": "RAC"
-    },
-    {
         "id": "racefi",
         "symbol": "racefi",
         "name": "RaceFi"
@@ -55715,11 +55690,6 @@
         "name": "Stargazer Protocol"
     },
     {
-        "id": "starlaunch",
-        "symbol": "stars",
-        "name": "StarLaunch"
-    },
-    {
         "id": "starlink",
         "symbol": "starl",
         "name": "StarLink"
@@ -55778,16 +55748,6 @@
         "id": "star-ship-royal",
         "symbol": "ssr",
         "name": "Star Ship Royal"
-    },
-    {
-        "id": "starship-token",
-        "symbol": "stars",
-        "name": "StarShip Stars"
-    },
-    {
-        "id": "starstream",
-        "symbol": "stars",
-        "name": "Starstream"
     },
     {
         "id": "starterra",

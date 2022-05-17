@@ -8,10 +8,10 @@ from pycoingecko import CoinGeckoAPI
 from pymongo import MongoClient
 
 
-def get_id_by_ticker(coinlist: dict, ticker: str) -> str:
+def get_coin_by_ticker(coinlist: dict, ticker: str) -> dict:
     for coin in coinlist:
         if coin["symbol"] == ticker:
-            return coin["id"]
+            return coin
     # TODO add case where coin doesn't exist, and add it
 
 
@@ -29,7 +29,7 @@ def load_tickers() -> dict:
 
 def save_tickers(data: dict):
     with open("tickers.json", "w") as write_file:
-        json.dumps(data, write_file)
+        json.dump(data, write_file)
 
 
 def get_price_from_response(response: dict, currency: str = "usd") -> float:
@@ -45,14 +45,25 @@ def calculate_totals(totals: dict, id: str, price: float, count: float) -> dict:
     totals[id]["rewards_total"] += gains
 
 
+def get_coin_price_by_date(coin_history: dict, date: str) -> float:
+    price_history = coin_history["prices"]
+    for price in price_history:
+        if price["date"] == date:
+            return price["price"]
+    return None
+
+
 def main():
+    client = MongoClient("mongodb://localhost:27017")
+    db = client.osmosis_taxes
     totals = {"rewards": 0}
     cg = CoinGeckoAPI()
     coin_list = load_coinlist()
     tickers = load_tickers()
     new_ticker = False
+    coinprices = {}
 
-    with open("history.csv", newline="") as csvfile:
+    with open("default.csv", newline="") as csvfile:
         reader = csv.DictReader(csvfile)
         for row in reader:
             if row["tx_type"] == "STAKING":
@@ -60,24 +71,29 @@ def main():
                     row["timestamp"], "%Y-%m-%d %H:%M:%S"
                 ).strftime("%d-%m-%Y")
                 ticker = row["received_currency"].lower()
-                if row["received_currency"] not in tickers:
-                    id = get_id_by_ticker(coin_list, ticker)
-                    tickers[ticker] = id
+                if ticker not in tickers.keys():
+                    print(f"Ticket: {ticker} not in tickers: {tickers}")
+                    coin = get_coin_by_ticker(coin_list, ticker)
+                    tickers[ticker] = coin["id"]
                     new_ticker = True
-                try:
-                    response = cg.get_coin_history_by_id(id, date, localization=False)
-                    sleep(1.5)
-                except:
-                    print("Max timer reached")
-                    sleep(60)
-                    response = cg.get_coin_history_by_id(id, date, localization=False)
-                price = get_price_from_response(response)
-                count = float(row["received_amount"])
-                calculate_totals(totals, id, price, count)
+                    populate_prices(coin)
+                id = tickers[ticker]
+                if id not in coinprices.keys():
+                    coinprices[id] = db.prices.find_one(
+                        {"id": id}
+                    )
+                price = get_coin_price_by_date(coinprices[id], date)
+                if price:
+                    count = float(row["received_amount"])
+                    calculate_totals(totals, id, price, count)
+                else: 
+                    print(f'id: {id}, date: {date}, row: {row}')
 
     for total in totals.keys():
+        if total == 'rewards':
+            continue
         print(
-            f"USD Total from {total}: {totals[total]['rewards_total']} from {totals[total][id]['count_received']}"
+            f"USD Total from {total}: ${totals[total]['rewards_total']} from {totals[total]['count_received']} tokens."
         )
     print(f"Total rewards earned: {totals['rewards']}")
 
@@ -85,13 +101,25 @@ def main():
         save_tickers(tickers)
 
 
-def populate_prices():
+def populate_prices(coin: dict):
     cg = CoinGeckoAPI()
     client = MongoClient("mongodb://localhost:27017")
     db = client.osmosis_taxes
-    token = {"id": "osmosis", "ticker": "osmo", "name": "Osmosis", "prices": {}}
-
+    token = {
+        "id": coin["id"],
+        "ticker": coin["symbol"],
+        "name": coin["name"],
+        "prices": [],
+    }
     start_date = date(2021, 6, 1)
+
+    existing_token = db.prices.find_one({"id": coin["id"]})
+    if existing_token:
+        latest_date = existing_token["prices"][-1]["date"]
+        token["prices"] = existing_token["prices"]
+        start_date = datetime.strptime(latest_date, "%d-%m-%Y").date()
+        print(f"Start Date with price history: {start_date}")
+
     end_date = date.today()
     delta = timedelta(days=1)
     while start_date <= end_date:
@@ -104,19 +132,26 @@ def populate_prices():
         except Exception as e:
             print(f"Exception: {e}")
             sleep(60)
-            response = cg.get_coin_history_by_id(id, start_date, localization=False)
+            continue
         if "market_data" not in response:
             start_date += delta
             continue
         price = get_price_from_response(response)
         print(f"Date: {formatted_date}, Price: {price}")
-        token["prices"][formatted_date] = price
+        token["prices"].append({"date": formatted_date, "price": price})
         start_date += delta
-    db.prices.insert_one(token)
+
+    if existing_token:
+        db.prices.update_one({"id": coin["id"]}, {"$set": {"prices": token["prices"]}})
+    else:
+        db.prices.insert_one(token)
+    client.close()
 
 
 if __name__ == "__main__":
-    # main()
-    populate_prices()
+    token = {"id": "osmosis", "symbol": "osmo", "name": "Osmosis"}
+
+    main()
+    # populate_prices(token)
 
 # https://lcd-osmosis.keplr.app/osmosis/gamm/v1beta1/pools?pagination.limit=10000
